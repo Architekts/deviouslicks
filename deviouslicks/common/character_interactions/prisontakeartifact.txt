@@ -1,0 +1,593 @@
+take_prisoner_artifact_interaction = {
+	category = interaction_category_hostile
+	use_diplomatic_range = no
+	ignores_pending_interaction_block = yes
+	icon = artifact
+
+	target_type = artifact
+	target_filter = recipient_artifacts
+	
+	
+	can_be_picked_artifact = {
+		trigger_if = {
+			limit = {
+				scope:recipient = {
+					is_ai = yes
+				}
+			}
+			scope:target = {
+				is_equipped = yes
+				OR = {
+					artifact_slot_type = primary_armament
+					artifact_slot_type = armor
+					artifact_slot_type = helmet
+					artifact_slot_type = regalia
+					artifact_slot_type = miscellaneous
+				}
+			}
+		}
+	}
+	
+	is_shown = {
+		scope:recipient = {
+			any_character_artifact = { 
+				is_equipped = yes 
+				OR = {
+					artifact_slot_type = primary_armament
+					artifact_slot_type = armor
+					artifact_slot_type = helmet
+					artifact_slot_type = regalia
+					artifact_slot_type = miscellaneous
+				}
+			}
+		}
+		scope:recipient = { is_imprisoned_by = scope:actor }
+	}
+	
+	is_highlighted = {
+		always = yes
+	}
+
+	on_accept = {
+		scope:target = {
+			set_owner = scope:actor
+		}
+		scope:recipient = {
+					add_opinion = {
+						target = scope:actor
+						modifier = theft_opinion
+						opinion = -60
+					}
+		}
+	}
+
+	auto_accept = yes
+	
+	ai_accept = {
+		base = 100
+	}
+}
+
+start_stealing_back_artifact = {
+	icon = icon_hostile
+	interface_priority = 70
+	category = interaction_category_hostile
+	common_interaction = yes
+
+	send_name = START_SCHEME
+
+	scheme = steal_back_artifact
+	ignores_pending_interaction_block = yes
+
+	target_type = artifact
+	target_filter = recipient_artifacts
+	
+	is_shown = {
+		NOR = {
+			scope:recipient = scope:actor
+			scope:recipient = { is_imprisoned_by = scope:actor }
+		}
+		scope:recipient = {
+			any_character_artifact = { exists = this }
+		}
+	}
+	
+	is_highlighted = {
+		always = yes
+	}
+
+	is_valid_showing_failures_only = {
+		
+		custom_description = {
+			object = scope:recipient
+			text = you_have_been_caught_trying_to_steal_artifact_from_target
+			scope:recipient = {
+				NOT = {
+					has_opinion_modifier = {
+						target = scope:actor
+						modifier = attempted_to_steal_artifact_from_me
+					}
+				}
+			}
+		}
+
+		custom_description = {
+			object = scope:recipient
+			text = you_have_recently_stolen_artifact_from_target
+			scope:recipient = {
+				NOT = {
+					has_opinion_modifier = {
+						target = scope:actor
+						modifier = stole_artifact_from_me
+					}
+				}
+			}
+		}
+	}
+
+	desc = {
+		triggered_desc = {
+			trigger = {
+				scope:actor = {
+					can_start_scheme = {
+						type = steal_back_artifact
+						target = scope:recipient
+					}
+				}
+			}
+			desc = scheme_interaction_tt_steal_back_artifact_approved
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			stress_impact = {
+				vengeful = medium_stress_impact_loss
+				honest = minor_stress_impact_gain
+				just = minor_stress_impact_loss
+			}
+		}
+		hidden_effect = {
+			scope:actor = {
+				send_interface_toast = {
+					title = start_stealing_back_artifact_notification
+
+					left_icon = scope:actor					
+					right_icon = scope:recipient
+
+					start_scheme = {
+						type = steal_back_artifact
+						target = scope:recipient
+						artifact = scope:target
+					}
+
+					show_as_tooltip = {
+						stress_impact = {
+							vengeful = medium_stress_impact_loss
+							honest = minor_stress_impact_gain
+							just = minor_stress_impact_loss
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	# AI
+	ai_potential = {
+		is_imprisoned = no
+		ai_greed >= low_negative_ai_value
+		intrigue >= low_skill_rating
+		has_outstanding_artifact_claims = yes
+		NOT = {
+			any_scheme = {
+				OR = {
+					scheme_type = murder
+					scheme_type = abduct
+					scheme_type = claim_throne
+					scheme_type = fabricate_hook
+					scheme_type = steal_back_artifact
+				}
+			}
+		}
+	}
+	
+	ai_target_quick_trigger = {
+		adult = yes
+	}
+	ai_targets = {
+		ai_recipients = scripted_relations
+	}
+
+	ai_targets = {
+		ai_recipients = liege
+	}
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = peer_vassals
+		max = 10
+	}
+	ai_targets = {
+		ai_recipients = family
+		max = 10
+	}
+	ai_targets = {
+		ai_recipients = vassals
+		max = 10
+	}
+
+	ai_frequency = 60
+
+	ai_will_do = {
+		base = -30
+		# Factor for personality (excluding realism).
+		modifier = {
+			add = {
+				value = ai_boldness
+				multiply = -1
+			}
+		}
+		modifier = {
+			ai_vengefulness > 0
+			add = ai_vengefulness
+		}
+		modifier = {
+			add = {
+				value = ai_compassion
+				multiply = -0.25
+			}
+		}
+		modifier = {
+			scope:actor = {
+				has_relation_rival = scope:recipient
+			}
+			add = 60
+		}
+		modifier = {
+			scope:actor = {
+				has_relation_nemesis = scope:recipient
+			}
+			add = 150
+		}
+		# Recipient is flaunting their artifacts and needs to be taken down a peg - from hold_court.3080
+		modifier = {
+			scope:recipient = {
+				OR = {
+					has_character_modifier = petition_event_artifact_exhibition_for_prestige
+					has_character_modifier = petition_event_artifact_exhibition_for_gold
+				}
+			}
+			add = 35
+		}
+		modifier = {
+			scope:actor = {
+				opinion = {
+					target = scope:recipient
+					value >= medium_positive_opinion
+				}
+				ai_greed <= high_positive_ai_value
+			}
+			factor = 0
+		}
+		modifier = {
+			scope:recipient = {
+				OR = {
+					has_relation_friend = scope:actor
+					has_relation_lover = scope:actor
+				}
+			}
+			factor = 0
+		}
+		modifier = {
+			scope:actor = {
+				has_royal_court = no
+			}
+			scope:target = {
+				OR = {
+					artifact_slot_type = throne
+					artifact_slot_type = wall_big
+					artifact_slot_type = wall_small
+					artifact_slot_type = sculpture
+					artifact_slot_type = book
+					artifact_slot_type = pedestal
+				}
+			}
+			factor = 0
+		}
+		modifier = {
+			scope:recipient = {
+				OR = {
+					AND = {
+						scope:target = {
+							artifact_slot_type = primary_armament
+						}
+						OR = {
+							any_equipped_character_artifact = {
+								artifact_slot_type = primary_armament
+								rarity = illustrious
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = primary_armament
+									rarity = famed
+								}
+								scope:target = {
+									OR = {
+										rarity = famed
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = primary_armament
+									rarity = masterwork
+								}
+								scope:target = {
+									OR = {
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = primary_armament
+									rarity = common
+								}
+								scope:target = {
+									rarity = common
+								}
+							}
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = regalia
+						}
+						OR = {
+							any_equipped_character_artifact = {
+								artifact_slot_type = regalia
+								rarity = illustrious
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = regalia
+									rarity = famed
+								}
+								scope:target = {
+									OR = {
+										rarity = famed
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = regalia
+									rarity = masterwork
+								}
+								scope:target = {
+									OR = {
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = regalia
+									rarity = common
+								}
+								scope:target = {
+									rarity = common
+								}
+							}
+						}	
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = helmet
+						}
+						OR = {
+							any_equipped_character_artifact = {
+								artifact_slot_type = helmet
+								rarity = illustrious
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = helmet
+									rarity = famed
+								}
+								scope:target = {
+									OR = {
+										rarity = famed
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = helmet
+									rarity = masterwork
+								}
+								scope:target = {
+									OR = {
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = helmet
+									rarity = common
+								}
+								scope:target = {
+									rarity = common
+								}
+							}
+						}	
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = armor
+						}
+						OR = {
+							any_equipped_character_artifact = {
+								artifact_slot_type = armor
+								rarity = illustrious
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = armor
+									rarity = famed
+								}
+								scope:target = {
+									OR = {
+										rarity = famed
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = armor
+									rarity = masterwork
+								}
+								scope:target = {
+									OR = {
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = armor
+									rarity = common
+								}
+								scope:target = {
+									rarity = common
+								}
+							}
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = miscellaneous
+							rarity = common
+						}
+						any_equipped_character_artifact = {
+							count >= 4
+							artifact_slot_type = miscellaneous
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = throne
+						}
+						OR = {
+							any_equipped_character_artifact = {
+								artifact_slot_type = throne
+								rarity = illustrious
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = throne
+									rarity = famed
+								}
+								scope:target = {
+									OR = {
+										rarity = famed
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = throne
+									rarity = masterwork
+								}
+								scope:target = {
+									OR = {
+										rarity = masterwork
+										rarity = common
+									}
+								}
+							}
+							AND = {
+								any_equipped_character_artifact = {
+									artifact_slot_type = throne
+									rarity = common
+								}
+								scope:target = {
+									rarity = common
+								}
+							}
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = wall_big
+							rarity = common
+						}
+						any_equipped_character_artifact = {
+							count >= 3
+							artifact_slot_type = wall_big
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = wall_small
+							rarity = common
+						}
+						any_equipped_character_artifact = {
+							count >= 3
+							artifact_slot_type = wall_small
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = sculpture
+							rarity = common
+						}
+						any_equipped_character_artifact = {
+							count >= 2
+							artifact_slot_type = sculpture
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = book
+							rarity = common
+						}
+						any_equipped_character_artifact = {
+							count >= 2
+							artifact_slot_type = book
+						}
+					}
+					AND = {
+						scope:target = {
+							artifact_slot_type = pedestal
+							rarity = common
+						}
+						any_equipped_character_artifact = {
+							count >= 4
+							artifact_slot_type = pedestal
+						}
+					}
+				}
+			}
+			factor = 0
+		}
+		start_hostile_scheme_ai_base_modifiers = yes # At the end so Cowed can block it completely
+	}
+
+	auto_accept = yes
+}
